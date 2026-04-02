@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PropertyIQ — House Price Predictor</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #070711;
+  --bg2:      #0d0d1e;
+  --bg3:      #12122a;
+  --border:   rgba(255,255,255,0.07);
+  --cyan:     #00d4ff;
+  --gold:     #f5c842;
+  --pink:     #ff6b9d;
+  --text:     #e8e8f0;
+  --muted:    #7a7a9a;
+  --success:  #00e5a0;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Background grain + mesh ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0,212,255,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 80% 80%, rgba(245,200,66,0.05) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 50% 50%, rgba(255,107,157,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* ── Layout ── */
+.container { max-width: 1180px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+/* ── Header ── */
+header {
+  padding: 36px 0 28px;
+  border-bottom: 1px solid var(--border);
+}
+.header-inner {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.logo {
+  display: flex; align-items: center; gap: 12px;
+}
+.logo-icon {
+  width: 42px; height: 42px;
+  background: linear-gradient(135deg, var(--cyan), var(--pink));
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.logo-text {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; font-weight: 700;
+  background: linear-gradient(90deg, var(--cyan), #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+}
+.logo-sub { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
+
+/* metric pills */
+.metrics-row {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+.metric-pill {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.metric-pill strong { color: var(--cyan); font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+
+/* ── Main grid ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  padding: 36px 0;
+}
+
+/* ── Form card ── */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+.card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: linear-gradient(90deg, var(--cyan), var(--pink), var(--gold));
+}
+.card-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 20px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.card-desc { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+/* ── Form ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.form-group { display: flex; flex-direction: column; gap: 7px; }
+.form-group.full-width { grid-column: 1 / -1; }
+
+label {
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted);
+}
+input, select {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  padding: 11px 14px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+}
+input:focus, select:focus {
+  border-color: var(--cyan);
+  box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+}
+select option { background: #1a1a2e; }
+
+/* ── Submit button ── */
+.btn-predict {
+  width: 100%; margin-top: 8px;
+  background: linear-gradient(135deg, var(--cyan) 0%, #7c3aed 100%);
+  border: none; border-radius: 12px;
+  color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 600;
+  padding: 15px;
+  cursor: pointer;
+  position: relative; overflow: hidden;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.btn-predict:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(0,212,255,0.25); }
+.btn-predict:active { transform: translateY(0); }
+.btn-predict.loading { opacity: 0.7; pointer-events: none; }
+
+/* ── Result card ── */
+.result-section { display: flex; flex-direction: column; gap: 20px; }
+
+.price-card {
+  background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(124,58,237,0.08));
+  border: 1px solid rgba(0,212,255,0.2);
+  border-radius: 20px; padding: 32px;
+  text-align: center;
+  position: relative; overflow: hidden;
+  transition: all 0.4s;
+}
+.price-card.revealed {
+  box-shadow: 0 0 60px rgba(0,212,255,0.12);
+}
+
+.price-label {
+  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 12px;
+}
+.price-main {
+  font-family: 'Playfair Display', serif;
+  font-size: 48px; font-weight: 900;
+  background: linear-gradient(135deg, var(--cyan), #a78bfa);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  line-height: 1;
+  opacity: 0; transform: translateY(20px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.price-main.show { opacity: 1; transform: translateY(0); }
+.price-symbol { font-size: 32px; }
+.price-unit { font-size: 14px; color: var(--muted); margin-top: 10px; }
+
+.price-breakdown {
+  display: flex; gap: 12px; justify-content: center; margin-top: 16px;
+}
+.breakdown-pill {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 14px;
+  font-size: 12px; color: var(--muted);
+}
+.breakdown-pill span { color: var(--gold); font-family: 'JetBrains Mono', monospace; }
+
+/* ── Stats mini grid ── */
+.stats-mini {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.stat-box {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 12px; padding: 16px;
+  text-align: center;
+}
+.stat-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px; color: var(--cyan);
+  margin-bottom: 4px;
+}
+.stat-lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── Placeholder state ── */
+.placeholder-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; padding: 40px;
+  opacity: 0.4;
+}
+.placeholder-icon { font-size: 48px; margin-bottom: 12px; }
+.placeholder-text { font-size: 13px; color: var(--muted); text-align: center; }
+
+/* ── Charts section ── */
+.charts-section {
+  padding: 0 0 48px;
+}
+.charts-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 22px; margin-bottom: 20px;
+}
+.charts-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+}
+.chart-card {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 16px; overflow: hidden;
+}
+.chart-card.wide { grid-column: 1 / -1; }
+.chart-card img { width: 100%; display: block; }
+.chart-lbl {
+  padding: 12px 16px; font-size: 12px;
+  color: var(--muted); border-top: 1px solid var(--border);
+  letter-spacing: 0.5px;
+}
+
+/* ── Error ── */
+.error-msg {
+  color: #ff6b6b; font-size: 13px;
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.2);
+  border-radius: 8px; padding: 10px 14px;
+  margin-top: 12px; display: none;
+}
+
+/* ── Footer ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 0;
+  text-align: center; font-size: 12px; color: var(--muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .main-grid, .charts-grid, .form-grid { grid-template-columns: 1fr; }
+  .charts-grid .chart-card.wide { grid-column: 1; }
+  .header-inner { flex-direction: column; gap: 16px; align-items: flex-start; }
+  .price-main { font-size: 36px; }
+  .stats-mini { grid-template-columns: repeat(3,1fr); }
+}
+
+/* ── Spinner ── */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+
+/* ── Pulse glow ── */
+@keyframes glow {
+  0%,100% { box-shadow: 0 0 20px rgba(0,212,255,0.1); }
+  50%      { box-shadow: 0 0 50px rgba(0,212,255,0.25); }
+}
+.price-card.revealed { animation: glow 3s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">🏠</div>
+        <div>
+          <div class="logo-text">PropertyIQ</div>
+          <div class="logo-sub">AI Price Intelligence</div>
+        </div>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-pill">Train R² <strong id="trainR2">—</strong></div>
+        <div class="metric-pill">Test R² <strong id="testR2">—</strong></div>
+        <div class="metric-pill">CV Score <strong id="cvScore">—</strong></div>
+        <div class="metric-pill">Test MAE <strong id="testMae">—</strong></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- LEFT: Form -->
+    <div>
+      <div class="card">
+        <div class="card-title">Property Details</div>
+        <div class="card-desc">Fill in the property attributes to get an AI-powered price estimate.</div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Area (sq ft)</label>
+            <input type="number" id="area" placeholder="e.g. 1200" min="200" max="10000" value="1200">
+          </div>
+          <div class="form-group">
+            <label>Bedrooms</label>
+            <select id="bedrooms">
+              <option value="1">1 BHK</option>
+              <option value="2" selected>2 BHK</option>
+              <option value="3">3 BHK</option>
+              <option value="4">4 BHK</option>
+              <option value="5">5 BHK</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Bathrooms</label>
+            <select id="bathrooms">
+              <option value="1">1</option>
+              <option value="2" selected>2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Parking Spots</label>
+            <select id="parking">
+              <option value="0">None</option>
+              <option value="1" selected>1</option>
+              <option value="2">2</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Floor Number</label>
+            <input type="number" id="floor" placeholder="e.g. 5" min="0" max="50" value="5">
+          </div>
+          <div class="form-group">
+            <label>Property Age (yrs)</label>
+            <input type="number" id="age" placeholder="e.g. 5" min="0" max="50" value="5">
+          </div>
+          <div class="form-group full-width">
+            <label>Location</label>
+            <select id="location">
+              <option value="">— Select Location —</option>
+            </select>
+          </div>
+          <div class="form-group full-width">
+            <label>Furnished Status</label>
+            <select id="furnished">
+              <option value="Furnished">Furnished</option>
+              <option value="Semi-Furnished" selected>Semi-Furnished</option>
+              <option value="Unfurnished">Unfurnished</option>
+            </select>
+          </div>
+        </div>
+
+        <button class="btn-predict" id="predictBtn" onclick="predict()">
+          Predict Price
+        </button>
+        <div class="error-msg" id="errorMsg"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Result -->
+    <div class="result-section">
+
+      <!-- Price card -->
+      <div class="price-card" id="priceCard">
+        <div id="placeholderState" class="placeholder-state">
+          <div class="placeholder-icon">🏙️</div>
+          <div class="placeholder-text">Enter property details<br>and click Predict</div>
+        </div>
+        <div id="resultState" style="display:none;">
+          <div class="price-label">Estimated Market Price</div>
+          <div class="price-main" id="priceMain">
+            <span class="price-symbol">₹</span><span id="priceVal">—</span>
+          </div>
+          <div class="price-unit" id="priceUnit"></div>
+          <div class="price-breakdown" id="priceBreakdown"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-mini">
+        <div class="stat-box">
+          <div class="stat-val" id="statR2">—</div>
+          <div class="stat-lbl">Test R²</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statMae">—</div>
+          <div class="stat-lbl">Test MAE</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="statCv">—</div>
+          <div class="stat-lbl">CV R²</div>
+        </div>
+      </div>
+
+      <!-- Model info -->
+      <div class="card" style="padding:20px;">
+        <div style="font-size:12px;color:var(--muted);line-height:1.8;">
+          <strong style="color:var(--text);display:block;margin-bottom:8px;">⚙️ Model Architecture</strong>
+          Ridge Regression · Polynomial Features (degree 2, interactions) · SelectKBest (top 60) · Log-transformed target · StandardScaler · OneHotEncoder for categorical features
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="charts-section">
+    <div class="charts-title">Model Analytics</div>
+    <div class="charts-grid">
+      <div class="chart-card wide">
+        <img src="/static/actual_vs_predicted.png" alt="Actual vs Predicted" loading="lazy">
+        <div class="chart-lbl">📊 Actual vs Predicted — Training & Test Sets</div>
+      </div>
+      <div class="chart-card">
+        <img src="/static/feature_importance.png" alt="Feature Importance" loading="lazy">
+        <div class="chart-lbl">🔑 Feature Importance (Ridge Coefficients)</div>
+      </div>
+      <div class="chart-card">
+        <img src="/static/cv_scores.png" alt="Cross Validation" loading="lazy">
+        <div class="chart-lbl">🔄 5-Fold Cross-Validation Scores</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    PropertyIQ · Linear Regression + Polynomial Features · Ridge Regularisation · Dataset: juhibhojani/house-price (Kaggle)
+  </div>
+</footer>
+
+<script>
+// ── Load metadata ─────────────────────────────────────────────────────────────
+fetch('/meta')
+  .then(r => r.json())
+  .then(meta => {
+    document.getElementById('trainR2').textContent  = meta.train_r2;
+    document.getElementById('testR2').textContent   = meta.test_r2;
+    document.getElementById('cvScore').textContent  = meta.cv_mean + ' ±' + meta.cv_std;
+    document.getElementById('testMae').textContent  = '₹' + (meta.test_mae/1e5).toFixed(1) + 'L';
+    document.getElementById('statR2').textContent   = meta.test_r2;
+    document.getElementById('statMae').textContent  = '₹' + (meta.test_mae/1e5).toFixed(1) + 'L';
+    document.getElementById('statCv').textContent   = meta.cv_mean;
+
+    const sel = document.getElementById('location');
+    meta.locations.forEach(loc => {
+      const opt = document.createElement('option');
+      opt.value = loc; opt.textContent = loc;
+      if (loc === 'Andheri') opt.selected = true;
+      sel.appendChild(opt);
+    });
+
+    // furnished options
+    const fsel = document.getElementById('furnished');
+    fsel.innerHTML = '';
+    meta.furnished_options.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f; opt.textContent = f;
+      if (f === 'Semi-Furnished') opt.selected = true;
+      fsel.appendChild(opt);
+    });
+  });
+
+// ── Predict ───────────────────────────────────────────────────────────────────
+async function predict() {
+  const btn = document.getElementById('predictBtn');
+  const err = document.getElementById('errorMsg');
+  err.style.display = 'none';
+
+  const area = parseFloat(document.getElementById('area').value);
+  if (!area || area < 100) {
+    showError('Please enter a valid area (min 100 sq ft).');
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.innerHTML = '<span class="spinner"></span> Analysing…';
+
+  const payload = {
+    area,
+    bedrooms:  parseInt(document.getElementById('bedrooms').value),
+    bathrooms: parseInt(document.getElementById('bathrooms').value),
+    parking:   parseInt(document.getElementById('parking').value),
+    floor:     parseFloat(document.getElementById('floor').value) || 0,
+    age:       parseFloat(document.getElementById('age').value) || 0,
+    location:  document.getElementById('location').value,
+    furnished: document.getElementById('furnished').value,
+  };
+
+  try {
+    const res  = await fetch('/predict', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+    const data = await res.json();
+
+    btn.classList.remove('loading');
+    btn.innerHTML = '✓ Predict Price';
+
+    if (!data.success) throw new Error(data.error);
+
+    // show result
+    const card = document.getElementById('priceCard');
+    document.getElementById('placeholderState').style.display = 'none';
+    document.getElementById('resultState').style.display = 'block';
+
+    const price = data.price;
+    let displayVal, unit;
+    if (price >= 1e7) {
+      displayVal = (price/1e7).toFixed(2);
+      unit = 'Crores (₹ Cr)';
+    } else {
+      displayVal = (price/1e5).toFixed(2);
+      unit = 'Lakhs (₹ L)';
+    }
+
+    document.getElementById('priceVal').textContent = displayVal;
+    document.getElementById('priceUnit').textContent = unit;
+    document.getElementById('priceBreakdown').innerHTML = `
+      <div class="breakdown-pill">₹<span>${data.price_lakhs.toFixed(1)}</span> Lakhs</div>
+      <div class="breakdown-pill">₹<span>${data.price_crores.toFixed(3)}</span> Crores</div>
+      <div class="breakdown-pill">₹<span>${Math.round(price/parseFloat(payload.area)).toLocaleString()}</span>/sq ft</div>
+    `;
+
+    card.classList.add('revealed');
+    setTimeout(() => document.getElementById('priceMain').classList.add('show'), 50);
+
+  } catch(e) {
+    btn.classList.remove('loading');
+    btn.innerHTML = 'Predict Price';
+    showError('Prediction failed: ' + e.message);
+  }
+}
+
+function showError(msg) {
+  const err = document.getElementById('errorMsg');
+  err.textContent = msg;
+  err.style.display = 'block';
+}
+
+// Allow Enter key
+document.addEventListener('keydown', e => { if (e.key === 'Enter') predict(); });
+</script>
+</body>
+</html>

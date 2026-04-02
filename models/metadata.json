@@ -1,0 +1,30 @@
+{
+  "train_r2": 0.9102,
+  "test_r2": 0.9079,
+  "train_mae": 3081115.78,
+  "test_mae": 2878760.35,
+  "cv_mean": 0.9004,
+  "cv_std": 0.0109,
+  "locations": [
+    "Andheri",
+    "Bandra",
+    "Borivali",
+    "Dadar",
+    "Goregaon",
+    "Juhu",
+    "Kandivali",
+    "Kurla",
+    "Lower Parel",
+    "Malad",
+    "Mulund",
+    "Powai",
+    "Thane",
+    "Vikhroli",
+    "Worli"
+  ],
+  "furnished_options": [
+    "Furnished",
+    "Semi-Furnished",
+    "Unfurnished"
+  ]
+}
